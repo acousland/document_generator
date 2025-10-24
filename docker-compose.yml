@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./templates:/app/templates
+      - ./generated_documents:/app/generated_documents
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - BASE_URL=http://localhost:8000
+    restart: unless-stopped

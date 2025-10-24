@@ -299,9 +299,9 @@ docker-compose up -d
 
 ## Links
 
-- **Live API Docs**: http://localhost:8000/docs
-- **GitHub Repository**: https://github.com/acousland/document_generator
+- **Live API Docs**: http://localhost:8000/docs (when server is running)
 - **MCP Protocol**: https://modelcontextprotocol.io
+- **FastAPI Documentation**: https://fastapi.tiangolo.com
 
 ## Support
 

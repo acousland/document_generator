@@ -39,9 +39,9 @@ def check_dependencies():
         ("uvicorn", "ASGI server"),
         ("pydantic", "Data validation"),
         ("pydantic_settings", "Settings management"),
-        ("docx", "Word document processing"),
+        ("docx", "Word document processing (python-docx)"),
         ("openpyxl", "Excel document processing"),
-        ("pptx", "PowerPoint document processing"),
+        ("pptx", "PowerPoint document processing (python-pptx)"),
         ("mcp", "Model Context Protocol"),
     ]
     

@@ -1,6 +1,6 @@
 """Data models for document generation requests and responses."""
 
-from typing import Dict, Any, Optional, Literal
+from typing import Dict, Any, Optional, Literal, List
 from pydantic import BaseModel, Field
 
 
@@ -10,11 +10,18 @@ class DocumentField(BaseModel):
     value: Any = Field(..., description="Value to fill in the field")
 
 
+class SlideSpec(BaseModel):
+    """Specification for a single slide in a presentation."""
+    slide_type: str = Field(..., description="Type of slide layout to use (matches slide_type in template metadata)")
+    fields: Dict[str, Any] = Field(default_factory=dict, description="Fields to populate in this slide")
+
+
 class GenerateDocumentRequest(BaseModel):
     """Request model for document generation."""
     template_name: str = Field(..., description="Name of the template to use")
     document_type: Literal["word", "excel", "powerpoint"] = Field(..., description="Type of document to generate")
-    fields: Dict[str, Any] = Field(..., description="Dictionary of field names and their values")
+    fields: Optional[Dict[str, Any]] = Field(None, description="Dictionary of field names and their values (for simple generation)")
+    slides: Optional[List[SlideSpec]] = Field(None, description="List of slide specifications (for advanced PowerPoint generation)")
     return_type: Literal["binary", "download_link"] = Field(default="binary", description="How to return the document")
 
 

@@ -57,8 +57,22 @@ class DocumentGeneratorMCPServer:
                     }
                 ),
                 Tool(
+                    name="get_powerpoint_slide_types",
+                    description="Get available slide types from a PowerPoint template. Each slide type is a reusable layout that can be used zero, one, or multiple times when composing a presentation. Slide types can be used in any order you choose - you're not limited to the order they appear in the template.",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "template_name": {
+                                "type": "string",
+                                "description": "Name of the PowerPoint template (without .pptx extension)"
+                            }
+                        },
+                        "required": ["template_name"]
+                    }
+                ),
+                Tool(
                     name="generate_document",
-                    description="Generate a document from a template with specified fields",
+                    description="Generate a document from a template. For PowerPoint: compose a custom presentation by selecting which slide types to use and in what order. You can use any slide type multiple times, skip slide types you don't need, and arrange them however makes sense for the content. Think of slide types as building blocks you can mix and match.",
                     inputSchema={
                         "type": "object",
                         "properties": {
@@ -73,7 +87,25 @@ class DocumentGeneratorMCPServer:
                             },
                             "fields": {
                                 "type": "object",
-                                "description": "Dictionary of field names and values to populate in the template"
+                                "description": "Dictionary of field names and values (for simple generation)"
+                            },
+                            "slides": {
+                                "type": "array",
+                                "description": "Array of slide specifications for PowerPoint (advanced composition mode). Each item specifies which slide_type to use and what content to put in it. You choose: which types, how many of each, and in what order. For example: [title_page, content, content, content, two_column, closing] uses 'content' three times in a row.",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "slide_type": {
+                                            "type": "string",
+                                            "description": "Type of slide to use"
+                                        },
+                                        "fields": {
+                                            "type": "object",
+                                            "description": "Fields to populate in this slide"
+                                        }
+                                    },
+                                    "required": ["slide_type", "fields"]
+                                }
                             },
                             "return_type": {
                                 "type": "string",
@@ -82,7 +114,7 @@ class DocumentGeneratorMCPServer:
                                 "default": "download_link"
                             }
                         },
-                        "required": ["template_name", "document_type", "fields"]
+                        "required": ["template_name", "document_type"]
                     }
                 )
             ]
@@ -90,6 +122,16 @@ class DocumentGeneratorMCPServer:
         @self.server.call_tool()
         async def call_tool(name: str, arguments: Any) -> list[TextContent]:
             """Handle tool calls."""
+            try:
+                return await _handle_tool(name, arguments)
+            except Exception as e:
+                return [TextContent(
+                    type="text",
+                    text=json.dumps({"error": f"Tool execution failed: {str(e)}"})
+                )]
+        
+        async def _handle_tool(name: str, arguments: Any) -> list[TextContent]:
+            """Internal handler for tools to allow try-catch wrapper."""
             
             if name == "list_templates":
                 templates = self.document_service.list_templates()
@@ -134,12 +176,44 @@ class DocumentGeneratorMCPServer:
                     text=json.dumps(result, indent=2)
                 )]
             
+            elif name == "get_powerpoint_slide_types":
+                template_name = arguments.get("template_name")
+                
+                try:
+                    slide_types = self.document_service.get_template_slide_types(template_name)
+                    result = {
+                        "template_name": template_name,
+                        "slide_types": slide_types
+                    }
+                    return [TextContent(
+                        type="text",
+                        text=json.dumps(result, indent=2)
+                    )]
+                except FileNotFoundError:
+                    return [TextContent(
+                        type="text",
+                        text=json.dumps({"error": f"Template '{template_name}.pptx' not found"})
+                    )]
+                except Exception as e:
+                    return [TextContent(
+                        type="text",
+                        text=json.dumps({"error": f"Error reading template: {str(e)}"})
+                    )]
+            
             elif name == "generate_document":
                 # Create request object
+                from ..models import SlideSpec
+                
+                slides_data = arguments.get("slides")
+                slides = None
+                if slides_data:
+                    slides = [SlideSpec(**slide) for slide in slides_data]
+                
                 request = GenerateDocumentRequest(
                     template_name=arguments.get("template_name"),
                     document_type=arguments.get("document_type"),
-                    fields=arguments.get("fields", {}),
+                    fields=arguments.get("fields"),
+                    slides=slides,
                     return_type=arguments.get("return_type", "download_link")
                 )
                 

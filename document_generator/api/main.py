@@ -47,6 +47,25 @@ async def list_templates():
     return document_service.list_templates()
 
 
+@app.get("/api/templates/{template_name}/slides")
+async def get_template_slide_types(template_name: str):
+    """
+    Get slide type information for a PowerPoint template.
+    
+    Returns metadata from slide notes including:
+    - slide_type: Type identifier for the slide
+    - description: Human-readable description
+    - placeholders: Dictionary of field definitions with types
+    """
+    try:
+        slide_types = document_service.get_template_slide_types(template_name)
+        return {"template_name": template_name, "slide_types": slide_types}
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error reading template: {str(e)}")
+
+
 @app.post("/api/generate", response_model=GenerateDocumentResponse)
 async def generate_document(request: GenerateDocumentRequest):
     """
